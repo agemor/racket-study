@@ -1,25 +1,15 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-beginner-reader.ss" "lang")((modname lab-3.3) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp")) #f)))
-<<<<<<< Updated upstream
-=======
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname |Lab 3-2.1|) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp")) #f)))
 
->>>>>>> Stashed changes
 (require 2htdp/image)
 (require 2htdp/universe)
 
 ;A ballon state (bs) is 
-<<<<<<< Updated upstream
-
-(define-struct balloon-state [radius])
-(define BA (make-balloon-state 20))
-
-=======
 
 (define-struct balloon-state [radius speed])
 (define BA (make-balloon-state 20 10))
 
->>>>>>> Stashed changes
 ;num is the circle's radius in pixels
 
 (define balloon1 100)
@@ -35,15 +25,9 @@
 ;state-> state
 
 (define (lengthX bs)
-<<<<<<< Updated upstream
-  ( make-balloon-state (+ (balloon-state-radius bs) 10)))
-
-(check-expect (lengthX BA) (make-balloon-state 30))
-=======
   ( make-balloon-state (+ (balloon-state-radius bs) (balloon-state-speed bs)) (balloon-state-speed bs)))
 
 (check-expect (lengthX BA) (make-balloon-state 30 10))
->>>>>>> Stashed changes
 
 ;picture
 ;state-> image
@@ -57,20 +41,6 @@
 ;bs x y string -> bs
 
 (define (click bs x y string)
-<<<<<<< Updated upstream
-  (cond [(string=? string "button down") (make-balloon-state (- (balloon-state-radius bs) 10))]
-        [else bs]))
-
-(check-expect (click BA 10 10 "button down") (make-balloon-state 10))
-(check-expect (click BA 10 10 "button ") (make-balloon-state 20))
-
-;bigbang  
-
-(big-bang CIRCLE-START
-          [on-tick lengthX 0.1]
-          [to-draw picture]
-          [on-mouse click])
-=======
   (cond [(string=? string "button-down")
          (make-balloon-state (balloon-state-radius bs) (- 0 (balloon-state-speed bs)))]
         [else bs])) 
@@ -93,4 +63,3 @@
 
 
 
->>>>>>> Stashed changes
