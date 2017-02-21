@@ -5,20 +5,27 @@
 (require 2htdp/universe)
 
 ;;;; CONSTANTS ;;;;
-(define GRID-HEIGHT 40) ;# cells in grid
-(define GRID-WIDTH 40)
+(define GRID-HEIGHT 41) ;# cells in grid
+(define GRID-WIDTH 41)
 (define CELL-HEIGHT 15) ;cells are 15px X 15px
 (define CELL-WIDTH 15)
 (define ACTIVE-COLOR "green")
 (define TYPING-COLOR "purple")
 (define STUCK-COLOR "red")
 (define SCENE-HEIGHT (* GRID-HEIGHT CELL-HEIGHT))
-(define SCENE-WIDTH (* GRID-WIDTH CELL-WIDTH))
+(define SCENE-WIDTH (* GRID-WIDTH CELL-WIDTH)) 
 (define SCENE (empty-scene SCENE-WIDTH SCENE-HEIGHT))
 
 ;;DATA DEFINITIONS;;
 
-;A WorldState (WS) is 3
+;A WorldState (WS) is
+(define-struct world [low key-input tick])
+
+(define WS1 (make-world empty "" 0))
+(define WS2 (make-world empty "WORDS" 0))
+
+
+                            ;key-input score])
 
 ;(1)A List of Words (LOW) 
 ;(2)Low
@@ -27,9 +34,10 @@
 ;A Word is a (make-word String Color Posn Boolean)
 (define-struct word [vocab color position stuck?])
 
+(define LOW0 empty)
 (define WORD1 (make-word "dog" ACTIVE-COLOR (make-posn 5 5) #false))
-(define WORD2 (make-word "cat" TYPING-COLOR (make-posn 6 7) #true))
-(define WORD3 (make-word "fish" STUCK-COLOR (make-posn 8 4) #false))
+(define WORD2 (make-word "cat" ACTIVE-COLOR (make-posn 6 7) #true))
+(define WORD3 (make-word "fish" ACTIVE-COLOR (make-posn 8 4) #false))
   
 ;A Letter is a (make-letter String Posn String)
 (define-struct letter [character position color ])
@@ -48,7 +56,7 @@
   
 ;LOL (List of Letter)
 ; – '()
-; – (cons Letteru LOL)
+; – (cons Letteru LOL) 
 (define LOL1 '())
 (define LOL2 (cons LETTER1 (cons LETTER2 (cons LETTER3 '()))))
   
@@ -110,32 +118,198 @@
           (create-lol (split (first low)) (word-position (first low)) (word-color (first low)))
           (LOW->LOL (rest low)))]))
 
-(LOW->LOL LOW2)
+
 
 ;LOL->Image
 ;takes in a list of letters and outputs an image
 
-(define (draw-lol lol)
-  (cond [(empty? lol) SCENE]
+(define (draw-lol lol ws)
+  (cond [(empty? lol) (place-image (text (world-key-input ws) 15 TYPING-COLOR) 300 600 SCENE)]
         [else (place-image (draw-letter (first lol))
                            (posnx->cell (letter-position (first lol)))
                            (posny->cell (letter-position (first lol)))
-                           (draw-lol (rest lol) ))]))
-
+                           (draw-lol (rest lol) ws ))]))
+ 
 ;LOW->Image
 ;takes in a list of word and outputs an image
 
-(define (draw-low low)
-  (draw-lol (LOW->LOL low)))
+(define (draw-low low ws)
+  (draw-lol (LOW->LOL low) ws))
 
-(draw-low LOW2)
+
+
+;SW->Image
+(define (draw-ws sw)
+  (draw-low (world-low sw) sw))
            
+;;;;;;on-tick function;;;;
 
 
+;number-words: low-> number 
+(define (number-words low)
+  (cond [(empty? low) 0]
+        [else (+ 1 (number-words (rest low)))]))
+ 
+ 
+;LOW -> LOW
+(define (update-word-position low)
+  (cond [(empty? low) empty]
+   [else  (cond [(check-collision? (rest low) (first low))
+            (cons (make-word (word-vocab (first low)) STUCK-COLOR (word-position (first low)) #true)
+                  (update-word-position (rest low)))]
+          [else (cons (make-word (word-vocab (first low))
+                           (word-color (first low))
+                           (make-posn (posn-x (word-position (first low))) (+ 1 (posn-y (word-position (first low)))))
+                           (word-stuck? (first low)))
+                           (update-word-position (rest low)))])])) 
 
-                               
+;SW->SW 
+
+(define (update-WORLD world)
+  (make-world (update-low world) (world-key-input  world) (+ 1 (world-tick world))))
+
   
 
+(define (check-collision? low word) 
+    (cond [(empty? low) (= (posn-y (word-position word)) 39)]
+                            
+          [else (cond [ (and (= (+ (posn-y (word-position word)) 1) (posn-y (word-position (first low))))
+                             (> (posn-x (word-position word))  ( - (posn-x (word-position (first low))) (string-length (word-vocab word))))
+                             (> (+ (posn-x (word-position (first low))) (string-length (word-vocab (first low)))) (posn-x (word-position word)))) #true]
+                      [else (check-collision? (rest low) word)])]))
+
+(define LOV (list "floor" "sky" "coffee" "computer" "ground" "chalk" "marker" "pigeon" "dog" "cat" "bird" "turtle" "parrot"
+                  "printer" "whale" "dolphin" "fish" "porpise" "seagull" "ferret" "shark" "jellyfish" "peach" "plum" "pear" "grape"))
+
+;LOW -> LOW
+;Adds a new random word to given low      !! CHECK EXPECT RANODM
+(define (add-random-word low)
+     (cons (get-random (list-ref LOV (random (length LOV)))) low))
+            
+      ;(get-random (random (length LOV))) '())]
+    ;[else (cons (first low) (add-random-word (rest low)))]))
 
 
+
+;String -> Word
+;Returns new Word to be placed on screen      !! CHECK EXPECT RANODM
+(define (get-random phrase)
+  (make-word phrase
+             ACTIVE-COLOR
+             (make-posn (get-random-x phrase) 0)
+             #false))
+ 
+;SW->LOW
+(define (get-random-x phrase)
+  (add1 (random (- 40 1 (string-length phrase)))))
+
+;(define (generate-new-word sw)
+;   (cond [(even? (world-tick sw)) (cons (make-word (Name LOV1) ACTIVE-COLOR (make-posn (get-random-x (Name LOV1) 0) #false) (world-low sw))]
+;       [else (world-low sw)])
+
+;SW->LOW
+(define (add-word sw)
+ (cond [(even? (world-tick sw)) (add-random-word (world-low sw))]
+       [else (world-low sw)]))
+
+(add-word WS2)
+ 
+;(define (Name LOV) (list-ref LOV (random (length LOV))))
+
+;(define LOV1 (list "dog" "fish" "cat" "rabbit"))
+
+;sw->low
+(define (update-low sw)
+    (update-word-position (add-word sw)));;
+
+;;;;stop-when;;;
+ 
+(define (Game-over?? low )
+  (cond [(empty? low) #false]
+  [else (cond [(and (check-collision? (rest low) (first low)) (= (posn-y (word-position (first low))) 0)) #true]
+              [else #false])]))
+
+
+(define (game-over? sw)
+  (Game-over?? (world-low sw)))
+
+;;;on-key;;;
+
+
+(define (place-string s)
+  (place-image (text s 15 TYPING-COLOR) 300 600 (empty-scene 600 630)))
+
+
+(define (handler sw string)
+  (cond [(string=? string "\b") (delete sw) ]
+        [(string=? string "\r") (enter sw)]
+        [(string-alphabetic? string) (write sw string)]
+        [else sw]))
+
+
+;(define-struct world [low key-input tick])
+
+(define (write ws string)
+  (make-world (world-low ws)
+              (string-append (world-key-input ws) string)
+              (world-tick ws)))
+   
+
+  (define (delete ws)
+    (make-world (world-low ws)
+                (substring (world-key-input ws) 0 ( - (string-length (world-key-input ws) ) 1))
+                (world-tick ws)))
+
+  (delete WS2)
   
+ 
+  (define (enter ws)
+    (make-world
+     (remove-word-state (world-low ws) (what-word (string-list (world-key-input ws) (active-list (world-low ws)))))
+     ""
+     (world-tick ws)))
+
+   (define (active-list low)
+     (cond [(empty? low) empty]
+           [else (cond [ (word-stuck? (first low)) (active-list (rest low))]
+                       [ else (cons (first low) (active-list (rest low)))])]))
+   
+;string-list: String -> LOW
+;returns a list of all instanced of the string
+   (define (string-list string low)
+     (cond [(empty? low) empty]
+           [else (if (string=? (word-vocab (first low)) string)
+                       (cons (first low) (string-list string (rest low)))
+                       (string-list string (rest low)))]))
+;LOW -> Word
+   (define (what-word low)
+     (cond [(empty? low) ""] 
+      [else (first (reverse low))]))
+
+(what-word LOW2)
+   
+;low Word -> LOW
+   (define (remove-word-state low word)
+     (cond [(empty? low) empty]
+           [else (if (equal? word (first low))
+                     (remove-word-state (rest low) word)
+                     (cons (first low) (remove-word-state (rest low) word)))]))
+
+   (remove-word-state LOW2 WORD2)
+   
+  
+ 
+
+;(define (blah sw string)
+;  (cond
+;    [;if input is enter, do x
+;     [; if input is delete, do y
+;      [;else, IF string-alpahbetic, add letter
+(define (main num)
+  (* num (world-tick
+          (big-bang WS1
+    (to-draw draw-ws)      
+    (on-tick update-WORLD num)
+    (on-key handler)
+    (stop-when game-over?)))))
+ 
